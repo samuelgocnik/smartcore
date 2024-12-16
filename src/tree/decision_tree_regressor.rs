@@ -105,6 +105,7 @@ pub struct DecisionTreeRegressor<TX: Number + PartialOrd, TY: Number, X: Array2<
     _phantom_ty: PhantomData<TY>,
     _phantom_x: PhantomData<X>,
     _phantom_y: PhantomData<Y>,
+    _number_of_features: Option<usize>,
 }
 
 impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
@@ -393,6 +394,7 @@ impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
             _phantom_ty: PhantomData,
             _phantom_x: PhantomData,
             _phantom_y: PhantomData,
+            _number_of_features: Option::None,
         }
     }
 
@@ -468,6 +470,7 @@ impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
             _phantom_ty: PhantomData,
             _phantom_x: PhantomData,
             _phantom_y: PhantomData,
+            _number_of_features: Some(num_attributes),
         };
 
         let mut visitor = NodeVisitor::<TX, TY, X, Y>::new(0, samples, &order, x, &y_m, 1);
@@ -698,6 +701,40 @@ impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
 
         true
     }
+
+    /// Compute the feature importances.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `normalize` - If `Some(true)`, the feature importances will be normalized to sum to 1.
+    /// 
+    /// # Returns
+    /// 
+    /// A vector of feature importances.
+    pub fn compute_feature_importances(&self, normalize: Option<bool>) -> Vec<f64> {
+        // TODO: get number of features from the data
+        let mut importances = vec![0f64; self._number_of_features.unwrap()];
+
+        for node in self.nodes().iter() {
+            if let Some(split_score) = node.split_score {
+                importances[node.split_feature] += split_score;
+            }
+        }
+
+        // Normalize importances
+        if let Some(should_normalize) = normalize {
+            if should_normalize {
+                let total_importance: f64 = importances.iter().sum();
+                if total_importance > 0.0 {
+                    for importance in importances.iter_mut() {
+                        *importance /= total_importance;
+                    }
+                }
+            }
+        }
+
+        importances
+    }
 }
 
 #[cfg(test)]
@@ -846,5 +883,39 @@ mod tests {
             bincode::deserialize(&bincode::serialize(&tree).unwrap()).unwrap();
 
         assert_eq!(tree, deserialized_tree);
+    }
+
+    #[test]
+    fn test_compute_feature_importances() {
+        // Create a small dataset
+        let x = DenseMatrix::from_2d_array(&[
+            &[0.417022, 0.720324, 0.000114, 0.302333],
+            &[0.092339, 0.186260, 0.345561, 0.396767],
+            &[0.419195, 0.685220, 0.204452, 0.878117],
+            &[0.670468, 0.417305, 0.558690, 0.140387],
+            &[0.800745, 0.968262, 0.313424, 0.692323],
+            &[0.894607, 0.085044, 0.039055, 0.169830],
+            &[0.098347, 0.421108, 0.957890, 0.533165],
+            &[0.315516, 0.686501, 0.834626, 0.018288],
+            &[0.988861, 0.748166, 0.280444, 0.789279],
+            &[0.447894, 0.908596, 0.293614, 0.287775],
+        ])
+        .unwrap();
+        let y = vec![
+            0.146756, 0.538817, 0.027388, 0.198101, 0.876389, 0.878143, 0.691877, 0.750144,
+            0.103226, 0.130029,
+        ];
+
+        // Initialize the regressor and Fit the regressor
+        let regressor = DecisionTreeRegressor::fit(&x, &y, Default::default()).unwrap();
+        let importances = regressor.compute_feature_importances(Some(true));
+
+        let expected_importances = vec![
+            0.6817220056816246,
+            0.0022094673418838313,
+            0.0,
+            0.3160685269764917,
+        ];
+        assert_eq!(importances, expected_importances);
     }
 }
