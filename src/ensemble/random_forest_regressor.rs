@@ -441,6 +441,32 @@ impl<TX: Number + FloatNumber + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1
         })
     }
 
+    pub fn compute_feature_importances(&self, normalize: Option<bool>) -> Vec<f64> {
+        // TODO: get rid of unwrap as_ref etc
+        let mut importances =
+            vec![0.0; self.trees.as_ref().unwrap()[0]._number_of_features.unwrap()];
+
+        for tree in self.trees.as_ref().unwrap() {
+            let tree_importances = tree.compute_feature_importances(Some(true));
+            for (i, imp) in tree_importances.iter().enumerate() {
+                importances[i] += imp;
+            }
+        }
+
+        if let Some(should_normalize) = normalize {
+            if should_normalize {
+                let total_importance: f64 = importances.iter().sum();
+                if total_importance > 0.0 {
+                    for importance in importances.iter_mut() {
+                        *importance /= total_importance;
+                    }
+                }
+            }
+        }
+
+        importances
+    }
+
     /// Predict class for `x`
     /// * `x` - _KxM_ data where _K_ is number of observations and _M_ is number of features.
     pub fn predict(&self, x: &X) -> Result<Y, Failed> {
