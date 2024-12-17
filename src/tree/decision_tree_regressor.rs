@@ -105,7 +105,7 @@ pub struct DecisionTreeRegressor<TX: Number + PartialOrd, TY: Number, X: Array2<
     _phantom_ty: PhantomData<TY>,
     _phantom_x: PhantomData<X>,
     _phantom_y: PhantomData<Y>,
-    _number_of_features: Option<usize>,
+    pub _number_of_features: Option<usize>,
 }
 
 impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
@@ -712,11 +712,11 @@ impl<TX: Number + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1<TY>>
     /// 
     /// A vector of feature importances.
     pub fn compute_feature_importances(&self, normalize: Option<bool>) -> Vec<f64> {
-        // TODO: get number of features from the data
         let mut importances = vec![0f64; self._number_of_features.unwrap()];
 
         for node in self.nodes().iter() {
             if let Some(split_score) = node.split_score {
+                // Accumulate the importance of the feature used for the split
                 importances[node.split_feature] += split_score;
             }
         }
