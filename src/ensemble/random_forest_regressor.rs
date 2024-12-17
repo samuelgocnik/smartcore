@@ -451,11 +451,10 @@ impl<TX: Number + FloatNumber + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1
     ///
     /// A vector of feature importances.
     pub fn compute_feature_importances(&self, normalize: Option<bool>) -> Vec<f64> {
-        // TODO: get rid of unwrap as_ref etc
-        let mut importances =
-            vec![0.0; self.trees.as_ref().unwrap()[0]._number_of_features.unwrap()];
+        let trees = self.trees.as_ref().unwrap();
+        let mut importances = vec![0.0; trees[0]._number_of_features.unwrap()];
 
-        for tree in self.trees.as_ref().unwrap() {
+        for tree in trees {
             let tree_importances = tree.compute_feature_importances(Some(true));
             for (i, imp) in tree_importances.iter().enumerate() {
                 importances[i] += imp;
