@@ -441,6 +441,15 @@ impl<TX: Number + FloatNumber + PartialOrd, TY: Number, X: Array2<TX>, Y: Array1
         })
     }
 
+    /// Compute the feature importances.
+    ///
+    /// # Arguments
+    ///
+    /// * `normalize` - Whether to normalize the feature importances.
+    ///
+    /// # Returns
+    ///
+    /// A vector of feature importances.
     pub fn compute_feature_importances(&self, normalize: Option<bool>) -> Vec<f64> {
         // TODO: get rid of unwrap as_ref etc
         let mut importances =
